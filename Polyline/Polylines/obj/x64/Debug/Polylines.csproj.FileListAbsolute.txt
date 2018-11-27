@@ -1,0 +1,6 @@
+C:\Users\dell\Desktop\CAD&VBA\Chap02\Polylines\obj\x64\Debug\Polylines.csprojResolveAssemblyReference.cache
+C:\Users\dell\Desktop\CAD&VBA\Chap02\Polylines\bin\x64\Debug\Polylines.dll
+C:\Users\dell\Desktop\CAD&VBA\Chap02\Polylines\bin\x64\Debug\Polylines.pdb
+C:\Users\dell\Desktop\CAD&VBA\Chap02\Polylines\bin\x64\Debug\DotNetARX.dll
+C:\Users\dell\Desktop\CAD&VBA\Chap02\Polylines\obj\x64\Debug\Polylines.dll
+C:\Users\dell\Desktop\CAD&VBA\Chap02\Polylines\obj\x64\Debug\Polylines.pdb
