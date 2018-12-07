@@ -4,6 +4,7 @@ using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.Geometry;
 using Autodesk.AutoCAD.Runtime;
 using DotNetARX;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -144,8 +145,9 @@ namespace Polylines
             Database db = HostApplicationServices.WorkingDatabase;
             using (Transaction trans = db.TransactionManager.StartTransaction())
             {
+
+                //第一条多段线
                 acDoc.Editor.WriteMessage("\n选择多段线: ");
-                //Polyline3d pl = null;
                 DBObject pl = null;
                 //请求在图形区域选择对象
                 PromptSelectionResult acSSPrompt = acDoc.Editor.GetSelection();
@@ -176,11 +178,10 @@ namespace Polylines
 
 
 
-
+                //选择的等高线
                 acDoc.Editor.WriteMessage("\n选择相交的等高线: ");
-                //Polyline3d pl = null;
+                //等高线集合
                 List<DBObject> obs = new List<DBObject>();
-                //DBObject pl = null;
                 //请求在图形区域选择对象
                 PromptSelectionResult  acSSPrompt1 = acDoc.Editor.GetSelection();
                 //如果提示状态OK，表示已选择对象
@@ -219,20 +220,66 @@ namespace Polylines
                 sbs.AppendLine("X,Y,Z");
                 int num = 0;
 
-
+                //第一条多段线
                 Polyline f2d = pl as Polyline;
 
                 foreach (Polyline highpl in obs)
                 {
                     f2d.Elevation = highpl.Elevation;
+                    //多段线和等高线的交点点集
                     Point3dCollection pds = new Point3dCollection();
                     f2d.IntersectWith(highpl, Intersect.OnBothOperands, pds, 0, 0);
-                    p3ds.Add(pds[0]);
+                    for (int i = 0; i < pds.Count; i++)
+                    {
+                        p3ds.Add(pds[i]);
+                    }
                 }
 
+
+                //按坐标排序
                 List<Point3d> points =p3ds.OrderBy(p=>p.X).ToList();
+                //判断点的高程，按从高到低生成剖面
+                double Z1 = points[0].Z;
+                double Z2 = points[points.Count - 1].Z;
+                if(Z1<Z2)
+                    points = p3ds.OrderByDescending(p => p.X).ToList();
+
+                ///生成剖面——————————————————
+                //算基准点
+                double x0 = points[0].X;
+                double y0 = points[0].Y- points[0].Z;
+
+                //剖面线点集
+                Point2dCollection p2c = new Point2dCollection();
+
+                //剖面线上第一个点
+                Point2d p2d = new Point2d(points[0].X, points[0].Y);
+                p2c.Add(p2d);
 
 
+                //累计值
+                List<double> dx = new List<double>();
+                List<double> dH = new List<double>();                
+                for (int i = 0; i < points.Count-1; i++)
+                {
+                    dx.Add( Math.Sqrt((points[i + 1].X - points[i].X) * (points[i + 1].X - points[i].X) + (points[i + 1].Y - points[i].Y) * (points[i + 1].Y - points[i].Y)));
+                    dH.Add(points[i + 1].Z);
+                }
+
+                //剖面线上的点
+                double sdx = x0; //dx累计值
+                for (int i = 0; i < dx.Count; i++)
+                {
+                    sdx += dx[i];
+                    p2c.Add(new Point2d(sdx, y0+dH[i]));
+                }
+
+                ///画剖面线——————————————————
+                Polyline ply2d = new Polyline();
+                ply2d.CreatePolyline(p2c);
+
+
+                //输出交点坐标
                 if (f2d != null)
                 {
                     for (int i = 0; i < points.Count; i++)
@@ -243,10 +290,7 @@ namespace Polylines
                     }
                 }
 
-
-
                 string[] vps = Regex.Split(sbs.ToString(), "\r\n");
-
                 SaveFileDialog sfd = new SaveFileDialog();
                 sfd.Filter = "文本文件|*.txt|所有文件|*.*";
                 if (sfd.ShowDialog() == DialogResult.OK)
@@ -255,8 +299,8 @@ namespace Polylines
                     File.WriteAllLines(targetpath, vps);
                 }
 
-                //关闭事务
-                //var  uuui=uuu.GetSplitCurves(0);
+                //添加对象到模型空间
+                db.AddToModelSpace(ply2d);
                 trans.Commit();
             }
         }
